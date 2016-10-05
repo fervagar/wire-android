@@ -1021,6 +1021,6 @@
     <string name="message_footer__status__delivered">%1$s \u30FB Delivered</string>
     <string name="message_footer__status__failed">Sending failed. _Resend_</string>
     <string name="message_footer__status__deleted">%1$s \u30FB Deleted</string>
-
+    <string name="message_footer__status__ephemeral">%1$s \u30FB %2$d seconds left</string>
 
 </resources>

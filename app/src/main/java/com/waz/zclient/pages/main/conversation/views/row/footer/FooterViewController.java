@@ -45,6 +45,7 @@ import com.waz.zclient.utils.ViewUtils;
 import com.waz.zclient.utils.ZTimeFormatter;
 import org.threeten.bp.DateTimeUtils;
 import org.threeten.bp.Instant;
+import org.threeten.bp.temporal.ChronoUnit;
 
 public class FooterViewController implements ConversationItemViewController,
                                              FooterLikeDetailsLayout.OnClickListener,
@@ -230,7 +231,10 @@ public class FooterViewController implements ConversationItemViewController,
                               message.getTime();
         String timestamp = ZTimeFormatter.getSingleMessageTime(getView().getContext(), DateTimeUtils.toDate(messageTime));
         String status;
-        if (message.getUser().isMe()) {
+        if (message.isEphemeral()) {
+            long remainingTime = remainingSeconds(message.getExpirationTime());
+            status = context.getString(R.string.message_footer__status__ephemeral, timestamp, remainingTime);
+        } else if (message.getUser().isMe()) {
             switch (message.getMessageStatus()) {
                 case PENDING:
                     status = context.getString(R.string.message_footer__status__sending);
@@ -271,6 +275,15 @@ public class FooterViewController implements ConversationItemViewController,
                                   });
     }
 
+    private long remainingSeconds(Instant instant) {
+        Instant now = Instant.now();
+        if (now.isAfter(instant)) {
+            return 0;
+        } else {
+            return ChronoUnit.SECONDS.between(now, instant);
+        }
+    }
+
     private void showLikeAnimation(boolean like) {
         final Interpolator interpolator = new AccelerateDecelerateInterpolator();
         float startScale;
@@ -293,11 +306,11 @@ public class FooterViewController implements ConversationItemViewController,
         likeButtonAnimation.setAlpha(startAlpha);
         likeButtonAnimation.setVisibility(View.VISIBLE);
         likeButtonAnimation.animate()
-                  .scaleX(endScale)
-                  .scaleY(endScale)
-                  .alpha(endAlpha)
-                  .setDuration(250)
-                  .setInterpolator(interpolator).withEndAction(new Runnable() {
+                           .scaleX(endScale)
+                           .scaleY(endScale)
+                           .alpha(endAlpha)
+                           .setDuration(250)
+                           .setInterpolator(interpolator).withEndAction(new Runnable() {
             @Override
             public void run() {
                 if (likeButtonAnimation != null) {
@@ -325,10 +338,10 @@ public class FooterViewController implements ConversationItemViewController,
             // needed for tests
             widthSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         } else {
-             widthSpec = View.MeasureSpec.makeMeasureSpec(parent.getMeasuredWidth()
-                                                                   - parent.getPaddingLeft()
-                                                                   - parent.getPaddingRight(),
-                                                                   View.MeasureSpec.AT_MOST);
+            widthSpec = View.MeasureSpec.makeMeasureSpec(parent.getMeasuredWidth()
+                                                         - parent.getPaddingLeft()
+                                                         - parent.getPaddingRight(),
+                                                         View.MeasureSpec.AT_MOST);
         }
         final int heightSpec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED);
         view.measure(widthSpec, heightSpec);
@@ -484,7 +497,8 @@ public class FooterViewController implements ConversationItemViewController,
     }
 
     private boolean shouldShowLikeButton() {
-        return !(message.getMessageStatus() == Message.Status.FAILED ||
+        return !message.isEphemeral() &&
+               !(message.getMessageStatus() == Message.Status.FAILED ||
                  message.getMessageStatus() == Message.Status.FAILED_READ ||
                  message.getMessageStatus() == Message.Status.PENDING);
     }
